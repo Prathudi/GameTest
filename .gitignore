@@ -1,0 +1,21 @@
+# Build output
+build/
+out/
+cmake-build-*/
+CMakeUserPresets.json
+
+# Visual Studio / editors
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# .NET
+bin/
+obj/
+TestResults/
+
+# Test reports
+test-result.xml
+*.log
