@@ -2,7 +2,6 @@
 build/
 out/
 cmake-build-*/
-CMakeUserPresets.json
 
 # Visual Studio / editors
 .vs/
@@ -16,6 +15,6 @@ bin/
 obj/
 TestResults/
 
-# Test reports
-test-result.xml
+# Files created when tests run (screenshots, logs, reports)
+/output/
 *.log

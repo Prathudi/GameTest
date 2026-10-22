@@ -1,2 +1,1 @@
-add_executable(snake src/main.cpp)
-target_link_libraries(snake PRIVATE testpilot_agent)
+add_executable(game app/main.cpp)
