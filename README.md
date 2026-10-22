@@ -1,4 +1,4 @@
-# TestPilot
+# GameTest
 
 A C++ in-game test agent and a C# test runner that automate testing of a
 sample Snake game, with a Jenkins pipeline that runs the tests on every commit.
