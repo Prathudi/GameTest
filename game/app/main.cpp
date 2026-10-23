@@ -2,27 +2,55 @@
 
 #include <iostream>
 #include <optional>
+#include <string>
+
+#include "gametest/game.h"
+#include "renderer.h"
+
+namespace {
+
+// Translates a real keyboard key into the game's own logical key.
+// Keys the game does not use give an empty result.
+std::optional<gametest::Key> toGameKey(sf::Keyboard::Key key) {
+    switch (key) {
+        case sf::Keyboard::Key::Up: return gametest::Key::Up;
+        case sf::Keyboard::Key::Down: return gametest::Key::Down;
+        case sf::Keyboard::Key::Left: return gametest::Key::Left;
+        case sf::Keyboard::Key::Right: return gametest::Key::Right;
+        case sf::Keyboard::Key::Enter: return gametest::Key::Enter;
+        case sf::Keyboard::Key::Escape: return gametest::Key::Escape;
+        default: return std::nullopt;
+    }
+}
+
+}  // namespace
 
 int main() {
-    sf::RenderWindow window(sf::VideoMode({640, 480}), "GameTest");
-    window.setFramerateLimit(60);
-    std::cout << "GameTest: window opened. Press Esc or close the window to quit.\n";
+    gametest::Game game(gametest::Game::defaultLevel());
 
-    sf::RectangleShape square({100.f, 100.f});
-    square.setPosition({270.f, 190.f});
-    square.setFillColor(sf::Color::Green);
+    sf::Font font;
+    const std::string fontPath = std::string(GAMETEST_ASSET_DIR) + "/fonts/PressStart2P-Regular.ttf";
+    if (!font.openFromFile(fontPath)) {
+        std::cerr << "GameTest: could not load the font: " << fontPath << "\n";
+        return 1;
+    }
+    const Renderer renderer(font);
+
+    sf::RenderWindow window(sf::VideoMode(Renderer::windowSize(game)), "GameTest");
+    window.setFramerateLimit(60);
+    window.setKeyRepeatEnabled(false);  // one key press = one step
+    std::cout << "GameTest: running. Enter = start, arrows = move, Esc = pause.\n";
 
     while (window.isOpen()) {
         while (const std::optional event = window.pollEvent()) {
             if (event->is<sf::Event::Closed>()) {
                 window.close();
-            } else if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
-                if (key->code == sf::Keyboard::Key::Escape) window.close();
+            } else if (const auto* pressed = event->getIf<sf::Event::KeyPressed>()) {
+                if (const auto key = toGameKey(pressed->code)) game.handleKey(*key);
             }
         }
 
-        window.clear(sf::Color(30, 30, 40));
-        window.draw(square);
+        renderer.draw(window, game);
         window.display();
     }
 
