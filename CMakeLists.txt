@@ -26,7 +26,13 @@ FetchContent_Declare(googletest
     URL https://github.com/google/googletest/archive/refs/tags/v1.15.2.zip
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
 
-FetchContent_MakeAvailable(SFML googletest)
+# nlohmann/json: reads and writes JSON in C++ (header-only).
+FetchContent_Declare(nlohmann_json
+    URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    SYSTEM)
+
+FetchContent_MakeAvailable(SFML googletest nlohmann_json)
 
 # ---- Strict warnings for OUR code only (set after the dependencies on purpose) ----
 if(MSVC)
@@ -38,4 +44,5 @@ endif()
 # ---- Our code ----
 enable_testing()
 add_subdirectory(game)
+add_subdirectory(agent)
 add_subdirectory(tests/cpp)
