@@ -1,0 +1,32 @@
+﻿namespace GameTest.Runner;
+
+public enum TestOutcome { Pass, Fail, Timeout }
+
+public static class TestOutcomeExtensions
+{
+    /// <summary>"PASS", "FAIL" or "TIMEOUT": the spelling used in the console and in report.json.</summary>
+    public static string ToLabel(this TestOutcome outcome) => outcome switch
+    {
+        TestOutcome.Pass => "PASS",
+        TestOutcome.Fail => "FAIL",
+        TestOutcome.Timeout => "TIMEOUT",
+        _ => throw new ArgumentOutOfRangeException(nameof(outcome)),
+    };
+}
+
+/// <summary>What happened when one test ran.</summary>
+public sealed class TestResult
+{
+    public required string Name { get; init; }
+    public required TestOutcome Outcome { get; init; }
+    public required TimeSpan Duration { get; init; }
+
+    /// <summary>Why a test did not pass. Null when it passed.</summary>
+    public string? FailureReason { get; init; }
+
+    /// <summary>The 1-based number of the step that failed, if any.</summary>
+    public int? FailedStep { get; init; }
+
+    /// <summary>One line per step performed, with the time it happened.</summary>
+    public required IReadOnlyList<string> Log { get; init; }
+}

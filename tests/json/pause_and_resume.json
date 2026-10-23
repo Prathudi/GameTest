@@ -1,0 +1,19 @@
+﻿{
+  "name": "pause_and_resume",
+  "description": "Escape pauses, Escape again resumes, and the player is exactly where they were and can move on.",
+  "timeout_ms": 15000,
+  "steps": [
+    { "action": "press", "key": "Enter" },
+    { "action": "wait_for", "expect": { "scene": "playing" }, "timeout_ms": 2000 },
+    { "action": "press", "key": "Right" },
+    { "action": "assert", "expect": { "player": { "x": 2, "y": 1 } } },
+    { "action": "press", "key": "Escape" },
+    { "action": "wait_for", "expect": { "scene": "paused" }, "timeout_ms": 2000 },
+    { "action": "assert", "expect": { "scene": "paused", "player": { "x": 2, "y": 1 } } },
+    { "action": "press", "key": "Escape" },
+    { "action": "wait_for", "expect": { "scene": "playing" }, "timeout_ms": 2000 },
+    { "action": "assert", "expect": { "scene": "playing", "player": { "x": 2, "y": 1 } } },
+    { "action": "press", "key": "Right" },
+    { "action": "assert", "expect": { "player": { "x": 3, "y": 1 } } }
+  ]
+}

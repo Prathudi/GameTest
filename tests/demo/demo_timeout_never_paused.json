@@ -1,0 +1,9 @@
+﻿{
+  "name": "demo_timeout_never_paused",
+  "description": "Deliberately waits for a pause that never happens. Must end as TIMEOUT.",
+  "timeout_ms": 15000,
+  "steps": [
+    { "action": "press", "key": "Enter" },
+    { "action": "wait_for", "expect": { "scene": "paused" }, "timeout_ms": 1000 }
+  ]
+}

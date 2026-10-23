@@ -1,0 +1,14 @@
+﻿{
+  "name": "wall_blocks_movement",
+  "description": "At the start (1,1) the cells above and to the left are walls, so Up and Left must not move the player.",
+  "timeout_ms": 15000,
+  "steps": [
+    { "action": "press", "key": "Enter" },
+    { "action": "wait_for", "expect": { "scene": "playing" }, "timeout_ms": 2000 },
+    { "action": "assert", "expect": { "player": { "x": 1, "y": 1 } } },
+    { "action": "press", "key": "Up" },
+    { "action": "assert", "expect": { "player": { "x": 1, "y": 1 } } },
+    { "action": "press", "key": "Left" },
+    { "action": "assert", "expect": { "player": { "x": 1, "y": 1 }, "score": 0 } }
+  ]
+}

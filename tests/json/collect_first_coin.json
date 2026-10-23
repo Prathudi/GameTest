@@ -1,0 +1,11 @@
+﻿{
+  "name": "collect_first_coin",
+  "description": "Walking to the coin at (1,5) raises the score to 1 and leaves 2 coins in the level.",
+  "timeout_ms": 20000,
+  "steps": [
+    { "action": "press", "key": "Enter" },
+    { "action": "wait_for", "expect": { "scene": "playing" }, "timeout_ms": 2000 },
+    { "action": "press", "keys": ["Down", "Down", "Right", "Down", "Down", "Left"] },
+    { "action": "assert", "expect": { "player": { "x": 1, "y": 5 }, "score": 1, "coins_remaining": 2 } }
+  ]
+}

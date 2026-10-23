@@ -1,0 +1,11 @@
+﻿{
+  "name": "manual_slow_test_for_kill",
+  "description": "Takes about 12 seconds. Kill game.exe while it runs to simulate a crash.",
+  "timeout_ms": 60000,
+  "steps": [
+    { "action": "press", "key": "Enter" },
+    { "action": "wait_for", "expect": { "scene": "playing" }, "timeout_ms": 2000 },
+    { "action": "press", "keys": ["Right", "Left", "Right", "Left", "Right", "Left", "Right", "Left", "Right", "Left", "Right", "Left"], "delay_ms": 1000 },
+    { "action": "assert", "expect": { "player": { "x": 1, "y": 1 } } }
+  ]
+}

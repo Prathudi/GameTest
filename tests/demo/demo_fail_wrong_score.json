@@ -1,0 +1,11 @@
+﻿{
+  "name": "demo_fail_wrong_score",
+  "description": "Deliberately wrong: expects score 5 after one move. Must end as FAIL.",
+  "timeout_ms": 15000,
+  "steps": [
+    { "action": "press", "key": "Enter" },
+    { "action": "wait_for", "expect": { "scene": "playing" }, "timeout_ms": 2000 },
+    { "action": "press", "key": "Right" },
+    { "action": "assert", "expect": { "score": 5 } }
+  ]
+}

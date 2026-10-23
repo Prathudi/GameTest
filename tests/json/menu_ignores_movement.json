@@ -1,0 +1,13 @@
+﻿{
+  "name": "menu_ignores_movement",
+  "description": "On the main menu only Enter does anything. Movement keys and Escape change nothing, and the player has not moved once the game starts.",
+  "timeout_ms": 15000,
+  "steps": [
+    { "action": "assert", "expect": { "scene": "main_menu" } },
+    { "action": "press", "keys": ["Right", "Down", "Left", "Up", "Escape"] },
+    { "action": "assert", "expect": { "scene": "main_menu", "player": { "x": 1, "y": 1 }, "score": 0 } },
+    { "action": "press", "key": "Enter" },
+    { "action": "wait_for", "expect": { "scene": "playing" }, "timeout_ms": 2000 },
+    { "action": "assert", "expect": { "player": { "x": 1, "y": 1 } } }
+  ]
+}

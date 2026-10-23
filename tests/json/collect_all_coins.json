@@ -1,0 +1,15 @@
+﻿{
+  "name": "collect_all_coins",
+  "description": "Walks through the whole level and collects all 3 coins: (1,5), then (6,7), then (8,3).",
+  "timeout_ms": 30000,
+  "steps": [
+    { "action": "press", "key": "Enter" },
+    { "action": "wait_for", "expect": { "scene": "playing" }, "timeout_ms": 2000 },
+    { "action": "press", "keys": ["Down", "Down", "Right", "Down", "Down", "Left"] },
+    { "action": "assert", "expect": { "player": { "x": 1, "y": 5 }, "score": 1, "coins_remaining": 2 } },
+    { "action": "press", "keys": ["Down", "Down", "Right", "Right", "Right", "Right", "Right"] },
+    { "action": "assert", "expect": { "player": { "x": 6, "y": 7 }, "score": 2, "coins_remaining": 1 } },
+    { "action": "press", "keys": ["Up", "Up", "Right", "Right", "Up", "Up"] },
+    { "action": "assert", "expect": { "player": { "x": 8, "y": 3 }, "score": 3, "coins_remaining": 0 } }
+  ]
+}

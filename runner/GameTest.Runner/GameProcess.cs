@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text.RegularExpressions;
 
 namespace GameTest.Runner;
@@ -50,7 +50,7 @@ public sealed class GameProcess : IAsyncDisposable
             throw new FileNotFoundException($"game executable not found: {exePath}", exePath);
         }
 
-        var startInfo = new ProcessStartInfo(exePath, "--agent-port 0")
+        var startInfo = new ProcessStartInfo(Path.GetFullPath(exePath), "--agent-port 0")
         {
             UseShellExecute = false,
             RedirectStandardOutput = true,

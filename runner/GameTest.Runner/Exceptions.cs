@@ -22,3 +22,9 @@ public class GameCrashedException : Exception
         ExitCode = exitCode;
     }
 }
+
+/// <summary>A test file cannot be read or does not follow the test format.</summary>
+public class TestDefinitionException : Exception
+{
+    public TestDefinitionException(string message) : base(message) { }
+}

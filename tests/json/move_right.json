@@ -1,0 +1,13 @@
+﻿{
+  "name": "move_right",
+  "description": "Starting the game and pressing Right moves the player one cell to the right.",
+  "timeout_ms": 15000,
+  "steps": [
+    { "action": "assert", "expect": { "scene": "main_menu" } },
+    { "action": "press", "key": "Enter" },
+    { "action": "wait_for", "expect": { "scene": "playing" }, "timeout_ms": 2000 },
+    { "action": "assert", "expect": { "player": { "x": 1, "y": 1 } } },
+    { "action": "press", "key": "Right" },
+    { "action": "assert", "expect": { "player": { "x": 2, "y": 1 }, "score": 0 } }
+  ]
+}

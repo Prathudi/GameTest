@@ -18,3 +18,4 @@ TestResults/
 # Files created when tests run (screenshots, logs, reports)
 /output/
 *.log
+results/
