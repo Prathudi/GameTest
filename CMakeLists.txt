@@ -8,7 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # ---- Dependencies (downloaded and built by CMake) ----
 include(FetchContent)
 
-# Build SFML as static libraries (no extra DLLs to copy) and skip audio (unused).
+# Build libraries as static (no extra DLLs to copy) and skip SFML audio (unused).
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 set(SFML_BUILD_AUDIO OFF CACHE BOOL "" FORCE)
 
@@ -18,7 +18,15 @@ FetchContent_Declare(SFML
     GIT_SHALLOW ON
     EXCLUDE_FROM_ALL
     SYSTEM)
-FetchContent_MakeAvailable(SFML)
+
+# GoogleTest: the C++ unit-test framework.
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)  # avoid MSVC runtime mismatch
+set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(googletest
+    URL https://github.com/google/googletest/archive/refs/tags/v1.15.2.zip
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+
+FetchContent_MakeAvailable(SFML googletest)
 
 # ---- Strict warnings for OUR code only (set after the dependencies on purpose) ----
 if(MSVC)
@@ -28,4 +36,6 @@ else()
 endif()
 
 # ---- Our code ----
+enable_testing()
 add_subdirectory(game)
+add_subdirectory(tests/cpp)
