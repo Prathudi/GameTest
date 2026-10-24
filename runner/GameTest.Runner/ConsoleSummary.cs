@@ -3,7 +3,7 @@
 /// <summary>Prints the end-of-run summary.</summary>
 public static class ConsoleSummary
 {
-    public static void Print(IReadOnlyList<TestResult> results, TimeSpan total)
+    public static void Print(IReadOnlyList<TestResult> results, TimeSpan total, string runDirectory)
     {
         ReportSummary s = ReportSummary.From(results);
 
@@ -24,6 +24,12 @@ public static class ConsoleSummary
             {
                 Console.WriteLine($"      {line.TrimEnd('\r')}");
             }
+            if (r.ScreenshotFile is not null) Console.WriteLine($"      screenshot: {FullPath(runDirectory, r.ScreenshotFile)}");
+            else if (r.ScreenshotError is not null) Console.WriteLine($"      no screenshot: {r.ScreenshotError}");
+            if (r.LogFile is not null) Console.WriteLine($"      log:        {FullPath(runDirectory, r.LogFile)}");
         }
     }
+
+    private static string FullPath(string runDirectory, string relative) =>
+        Path.GetFullPath(Path.Combine(runDirectory, relative));
 }

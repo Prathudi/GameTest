@@ -68,6 +68,41 @@ if (args.Length > 0 && args[0] == "run-all")
 {
     return await RunAllCommand.RunAsync(args, FindGameExecutable);
 }
+// "screenshot [out.png] [game.exe]": start the game, begin playing, and save a picture of its window.
+if (args.Length > 0 && args[0] == "screenshot")
+{
+    if (!OperatingSystem.IsWindows())
+    {
+        Console.WriteLine("ERROR  screenshots are only supported on Windows.");
+        return 2;
+    }
+    string outPath = args.Length > 1 ? args[1] : Path.Combine("results", "manual", "screenshot_test.png");
+    string? gameExe = args.Length > 2 ? args[2] : FindGameExecutable();
+    if (gameExe is null)
+    {
+        Console.WriteLine("ERROR  could not find the game. Build it first, or pass its path as the third argument.");
+        return 2;
+    }
+
+    try
+    {
+        WindowCapture.MakeProcessDpiAware();
+        await using GameProcess game = await GameProcess.StartAsync(gameExe, TimeSpan.FromSeconds(10));
+        using AgentClient client = await game.ConnectAsync(TimeSpan.FromSeconds(10));
+        await client.PressKeyAsync("Enter");
+        await Task.Delay(300);  // let the game draw a frame or two of the level
+        IntPtr window = await WindowCapture.WaitForWindowAsync(game, TimeSpan.FromSeconds(5));
+        await WindowCapture.CaptureClientAreaAsync(window, outPath);
+        Console.WriteLine($"Saved {Path.GetFullPath(outPath)} ({new FileInfo(outPath).Length} bytes)");
+        await game.StopAsync(client);
+        return 0;
+    }
+    catch (Exception ex) when (ex is ScreenshotException or AgentTimeoutException or AgentException or GameCrashedException or FileNotFoundException)
+    {
+        Console.WriteLine($"ERROR  {ex.Message}");
+        return 2;
+    }
+}
 string? exe = args.Length > 0 ? args[0] : FindGameExecutable();
 if (exe is null)
 {
@@ -153,6 +188,7 @@ static string? FindGameExecutable()
     }
     return null;
 }
+
 
 
 

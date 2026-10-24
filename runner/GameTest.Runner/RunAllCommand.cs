@@ -26,26 +26,41 @@ public static class RunAllCommand
             return 2;
         }
 
-        Console.WriteLine($"Game:  {gameExe}");
-        Console.WriteLine($"Tests: {loaded.Tests.Count} from {folder}\n");
+        // Screenshots must show real screen pixels, so this program has to know the display scaling.
+        if (OperatingSystem.IsWindows()) WindowCapture.MakeProcessDpiAware();
 
+        // The tests write their evidence into this folder, so it must exist before they start.
         DateTimeOffset startedAt = DateTimeOffset.Now;
+        string runDirectory;
+        try
+        {
+            runDirectory = ReportWriter.CreateRunDirectory(OutputRoot, startedAt);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Console.WriteLine($"ERROR  could not create the output folder: {ex.Message}");
+            return 2;
+        }
+
+        Console.WriteLine($"Game:   {gameExe}");
+        Console.WriteLine($"Tests:  {loaded.Tests.Count} from {folder}");
+        Console.WriteLine($"Output: {Path.GetFullPath(runDirectory)}\n");
+
         var clock = Stopwatch.StartNew();
         int done = 0;
         int count = loaded.Tests.Count;
 
-        List<TestResult> results = await TestRunner.RunAllAsync(loaded.Tests, gameExe, result =>
+        List<TestResult> results = await TestRunner.RunAllAsync(loaded.Tests, gameExe, runDirectory, result =>
         {
             done++;
             Console.WriteLine($"[{done}/{count}] {result.Outcome.ToLabel(),-8}{result.Name}  ({result.Duration.TotalMilliseconds:0} ms)");
         });
         clock.Stop();
 
-        ConsoleSummary.Print(results, clock.Elapsed);
+        ConsoleSummary.Print(results, clock.Elapsed, runDirectory);
 
         try
         {
-            string runDirectory = ReportWriter.CreateRunDirectory(OutputRoot, startedAt);
             string reportPath = ReportWriter.Write(
                 runDirectory, new RunInfo(startedAt, clock.Elapsed, gameExe, folder), results);
             Console.WriteLine($"\nReport: {reportPath}");

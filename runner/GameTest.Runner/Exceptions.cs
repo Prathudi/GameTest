@@ -28,3 +28,10 @@ public class TestDefinitionException : Exception
 {
     public TestDefinitionException(string message) : base(message) { }
 }
+
+
+/// <summary>A screenshot could not be taken.</summary>
+public class ScreenshotException : Exception
+{
+    public ScreenshotException(string message) : base(message) { }
+}

@@ -17,12 +17,16 @@ public sealed record ReportSummary(int Total, int Passed, int Failed, int TimedO
         results.Count(r => r.Outcome == TestOutcome.Timeout));
 }
 
+/// <summary>One test in the report. File paths are relative to the folder that holds report.json.</summary>
 public sealed record TestReportEntry(
     string Name,
     string Outcome,
     long DurationMs,
     string? FailureReason,
     int? FailedStep,
+    string? Screenshot,
+    string? ScreenshotError,
+    string? LogFile,
     IReadOnlyList<string> Log);
 
 public sealed record RunReport(
@@ -72,6 +76,9 @@ public static class ReportWriter
                 (long)r.Duration.TotalMilliseconds,
                 r.FailureReason,
                 r.FailedStep,
+                r.ScreenshotFile,
+                r.ScreenshotError,
+                r.LogFile,
                 r.Log)).ToList());
 
         string path = Path.GetFullPath(Path.Combine(runDirectory, "report.json"));

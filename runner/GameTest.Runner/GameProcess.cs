@@ -22,6 +22,20 @@ public sealed class GameProcess : IAsyncDisposable
 
     public bool HasExited => _process.HasExited;
 
+    /// <summary>The operating-system id of the game process.</summary>
+    public int ProcessId => _process.Id;
+
+    /// <summary>The handle of the game's main window, or IntPtr.Zero if it has none (yet).</summary>
+    public IntPtr MainWindowHandle
+    {
+        get
+        {
+            if (_process.HasExited) return IntPtr.Zero;
+            _process.Refresh();  // the window handle is cached; refresh to see a new window
+            return _process.MainWindowHandle;
+        }
+    }
+
     public int? ExitCode => _process.HasExited ? _process.ExitCode : null;
 
     /// <summary>Everything the game has printed so far (stdout and stderr).</summary>
@@ -218,3 +232,4 @@ public sealed class GameProcess : IAsyncDisposable
         }
     }
 }
+

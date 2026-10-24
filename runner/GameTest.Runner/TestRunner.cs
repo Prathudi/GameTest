@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Text;
 
 namespace GameTest.Runner;
 
@@ -9,11 +10,14 @@ public static class TestRunner
 
     /// <summary>
     /// Runs the tests one after another. A failing test never stops the others.
-    /// <paramref name="onResult"/> is called as soon as each test finishes.
+    /// If <paramref name="outputDirectory"/> is given, each test gets a subfolder there with
+    /// its log and, when it did not pass, a screenshot. <paramref name="onResult"/> is called
+    /// as soon as each test finishes.
     /// </summary>
     public static async Task<List<TestResult>> RunAllAsync(
         IReadOnlyList<TestDefinition> tests,
         string gameExe,
+        string? outputDirectory = null,
         Action<TestResult>? onResult = null,
         CancellationToken cancellationToken = default)
     {
@@ -21,55 +25,64 @@ public static class TestRunner
         foreach (TestDefinition test in tests)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            TestResult result = await RunOneAsync(test, gameExe, cancellationToken);
+            TestResult result = await RunOneAsync(test, gameExe, outputDirectory, cancellationToken);
             results.Add(result);
             onResult?.Invoke(result);
         }
         return results;
     }
 
-    /// <summary>Starts a game, runs one test on it, and always shuts the game down.</summary>
+    /// <summary>Starts a game, runs one test on it, collects evidence, and always shuts the game down.</summary>
     public static async Task<TestResult> RunOneAsync(
-        TestDefinition test, string gameExe, CancellationToken cancellationToken = default)
+        TestDefinition test, string gameExe, string? outputDirectory = null, CancellationToken cancellationToken = default)
     {
         var clock = Stopwatch.StartNew();
+        string? testDirectory = outputDirectory is null ? null : Path.Combine(outputDirectory, test.Name);
         GameProcess? game = null;
+        TestResult result;
         try
         {
             game = await GameProcess.StartAsync(gameExe, StartupTimeout);
             using AgentClient client = await game.ConnectAsync(StartupTimeout);
 
-            TestResult result = await TestExecutor.RunAsync(test, client, cancellationToken);
-            if (result.Outcome != TestOutcome.Pass) result = await ExplainIfGameDiedAsync(result, game);
+            result = await TestExecutor.RunAsync(test, client, cancellationToken);
+            if (result.Outcome != TestOutcome.Pass)
+            {
+                result = await ExplainIfGameDiedAsync(result, game);
+                // The picture must be taken now, while the game window still exists.
+                if (testDirectory is not null) await CaptureFailureAsync(result, game, testDirectory);
+            }
 
             await game.StopAsync(client);
-            return result;
         }
         catch (AgentTimeoutException ex)
         {
-            return Failure(test, TestOutcome.Timeout, $"the game could not be started: {ex.Message}", clock);
+            result = Failure(test, TestOutcome.Timeout, $"the game could not be started: {ex.Message}", clock);
         }
         catch (GameCrashedException ex)
         {
-            return Failure(test, TestOutcome.Fail, $"the game crashed while starting: {ex.Message}", clock);
+            result = Failure(test, TestOutcome.Fail, $"the game crashed while starting: {ex.Message}", clock);
         }
         catch (FileNotFoundException ex)
         {
-            return Failure(test, TestOutcome.Fail, ex.Message, clock);
+            result = Failure(test, TestOutcome.Fail, ex.Message, clock);
         }
         catch (AgentException ex)
         {
-            return Failure(test, TestOutcome.Fail, $"the game could not be started: {ex.Message}", clock);
+            result = Failure(test, TestOutcome.Fail, $"the game could not be started: {ex.Message}", clock);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // A bug or an odd environment problem in ONE test must not end the whole run.
-            return Failure(test, TestOutcome.Fail, $"unexpected error: {ex.GetType().Name}: {ex.Message}", clock);
+            result = Failure(test, TestOutcome.Fail, $"unexpected error: {ex.GetType().Name}: {ex.Message}", clock);
         }
         finally
         {
             if (game is not null) await game.DisposeAsync();
         }
+
+        if (testDirectory is not null) WriteLog(test, result, testDirectory);
+        return result;
     }
 
     // After a failed test: if the game process has exited, say so, with its exit code and output.
@@ -92,6 +105,64 @@ public static class TestRunner
         };
     }
 
+    // Saves a picture of the game window. This is evidence, so it is best-effort: whatever goes
+    // wrong is recorded in the result and must never replace the test's real outcome.
+    private static async Task CaptureFailureAsync(TestResult result, GameProcess game, string testDirectory)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            result.ScreenshotError = "screenshots are only supported on Windows";
+            return;
+        }
+        if (game.HasExited)
+        {
+            result.ScreenshotError = "the game had already exited, so there was no window to capture";
+            return;
+        }
+
+        try
+        {
+            IntPtr window = await WindowCapture.WaitForWindowAsync(game, TimeSpan.FromSeconds(2));
+            string fileName = $"{result.Name}_{result.Outcome.ToLabel()}_{DateTime.Now:HHmmss}.png";
+            await WindowCapture.CaptureClientAreaAsync(window, Path.Combine(testDirectory, fileName));
+            result.ScreenshotFile = $"{result.Name}/{fileName}";
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            result.ScreenshotError = ex is ScreenshotException ? ex.Message : $"{ex.GetType().Name}: {ex.Message}";
+        }
+    }
+
+    // Writes the test's log file: a short header followed by the step log.
+    private static void WriteLog(TestDefinition test, TestResult result, string testDirectory)
+    {
+        try
+        {
+            Directory.CreateDirectory(testDirectory);
+            string fileName = $"{test.Name}.log";
+
+            var lines = new List<string>
+            {
+                $"test:       {test.Name}",
+                $"file:       {test.SourceFile}",
+                $"outcome:    {result.Outcome.ToLabel()}",
+                $"duration:   {result.Duration.TotalMilliseconds:0} ms",
+            };
+            if (result.FailureReason is not null) lines.Add($"reason:     {result.FailureReason}");
+            if (result.ScreenshotFile is not null) lines.Add($"screenshot: {result.ScreenshotFile}");
+            if (result.ScreenshotError is not null) lines.Add($"no screenshot: {result.ScreenshotError}");
+            lines.Add("");
+            lines.AddRange(result.Log);
+
+            File.WriteAllLines(Path.Combine(testDirectory, fileName), lines, new UTF8Encoding(false));
+            result.LogFile = $"{test.Name}/{fileName}";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Evidence is best-effort: a full disk must not turn a result into a crash.
+        }
+    }
+
     private static TestResult Failure(TestDefinition test, TestOutcome outcome, string reason, Stopwatch clock) =>
         new()
         {
@@ -100,5 +171,6 @@ public static class TestRunner
             Duration = clock.Elapsed,
             FailureReason = reason,
             Log = new[] { reason },
+            ScreenshotError = "the game did not start, so there was no window to capture",
         };
 }

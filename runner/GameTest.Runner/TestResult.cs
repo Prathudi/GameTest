@@ -29,4 +29,15 @@ public sealed class TestResult
 
     /// <summary>One line per step performed, with the time it happened.</summary>
     public required IReadOnlyList<string> Log { get; init; }
+
+    // Evidence files. Paths are relative to the run folder and use '/' as the separator.
+
+    /// <summary>The screenshot taken when the test did not pass, if one could be taken.</summary>
+    public string? ScreenshotFile { get; set; }
+
+    /// <summary>Why there is no screenshot, when the test did not pass and none was taken.</summary>
+    public string? ScreenshotError { get; set; }
+
+    /// <summary>The text log of this test.</summary>
+    public string? LogFile { get; set; }
 }
