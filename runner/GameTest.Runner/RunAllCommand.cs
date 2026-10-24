@@ -6,8 +6,9 @@ namespace GameTest.Runner;
 public static class RunAllCommand
 {
     private const string OutputRoot = "results";
+    private const int InterruptedExitCode = 130;  // the usual exit code for "stopped with Ctrl+C"
 
-    /// <returns>0 = all passed, 1 = at least one test did not pass, 2 = setup problem.</returns>
+    /// <returns>0 = all passed, 1 = at least one test did not pass, 2 = setup problem, 130 = interrupted.</returns>
     public static async Task<int> RunAsync(string[] args, Func<string?> findGame)
     {
         string folder = args.Length > 1 ? args[1] : Path.Combine("tests", "json");
@@ -42,27 +43,59 @@ public static class RunAllCommand
             return 2;
         }
 
+        WarnAboutRunningGames(gameExe);
+
         Console.WriteLine($"Game:   {gameExe}");
         Console.WriteLine($"Tests:  {loaded.Tests.Count} from {folder}");
         Console.WriteLine($"Output: {Path.GetFullPath(runDirectory)}\n");
 
-        var clock = Stopwatch.StartNew();
-        int done = 0;
         int count = loaded.Tests.Count;
+        var completed = new List<TestResult>();
+        bool interrupted = false;
 
-        List<TestResult> results = await TestRunner.RunAllAsync(loaded.Tests, gameExe, runDirectory, result =>
+        // First Ctrl+C: stop cleanly (the running game is closed, finished results are kept).
+        // Second Ctrl+C: let the system end the program at once.
+        using var cancellation = new CancellationTokenSource();
+        int presses = 0;
+        ConsoleCancelEventHandler onCancel = (_, e) =>
         {
-            done++;
-            Console.WriteLine($"[{done}/{count}] {result.Outcome.ToLabel(),-8}{result.Name}  ({result.Duration.TotalMilliseconds:0} ms)");
-        });
+            if (++presses > 1) return;
+            e.Cancel = true;
+            Console.WriteLine("\nCtrl+C: stopping. The current game is being closed (press Ctrl+C again to quit at once).");
+            cancellation.Cancel();
+        };
+        Console.CancelKeyPress += onCancel;
+
+        var clock = Stopwatch.StartNew();
+        try
+        {
+            await TestRunner.RunAllAsync(loaded.Tests, gameExe, runDirectory, result =>
+            {
+                completed.Add(result);
+                Console.WriteLine($"[{completed.Count}/{count}] {result.Outcome.ToLabel(),-8}{result.Name}  ({result.Duration.TotalMilliseconds:0} ms)");
+            }, cancellation.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            interrupted = true;
+        }
+        finally
+        {
+            Console.CancelKeyPress -= onCancel;
+        }
         clock.Stop();
 
-        ConsoleSummary.Print(results, clock.Elapsed, runDirectory);
+        if (interrupted)
+        {
+            Console.WriteLine($"\nINTERRUPTED  {completed.Count} of {count} tests finished; the rest were not run.");
+        }
+
+        ConsoleSummary.Print(completed, clock.Elapsed, runDirectory);
 
         try
         {
             string reportPath = ReportWriter.Write(
-                runDirectory, new RunInfo(startedAt, clock.Elapsed, gameExe, folder), results);
+                runDirectory, new RunInfo(startedAt, clock.Elapsed, gameExe, folder, interrupted), completed);
             Console.WriteLine($"\nReport: {reportPath}");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -71,6 +104,23 @@ public static class RunAllCommand
             return 2;
         }
 
-        return results.All(r => r.Outcome == TestOutcome.Pass) ? 0 : 1;
+        if (interrupted) return InterruptedExitCode;
+        return completed.All(r => r.Outcome == TestOutcome.Pass) ? 0 : 1;
+    }
+
+    // Old game processes do no harm to the port (the game picks a free one), but they can leak
+    // memory and clutter the screen, which makes problems harder to see. Warn, don't stop.
+    private static void WarnAboutRunningGames(string gameExe)
+    {
+        string processName = Path.GetFileNameWithoutExtension(gameExe);
+        Process[] running = Process.GetProcessesByName(processName);
+        int count = running.Length;
+        foreach (Process process in running) process.Dispose();
+
+        if (count > 0)
+        {
+            Console.WriteLine($"WARNING  {count} '{processName}' process(es) were already running before this run.");
+            Console.WriteLine("         Close them for clean results: old windows can confuse screenshots.\n");
+        }
     }
 }

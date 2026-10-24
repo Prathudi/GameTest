@@ -43,8 +43,8 @@ public static class TestRunner
         TestResult result;
         try
         {
-            game = await GameProcess.StartAsync(gameExe, StartupTimeout);
-            using AgentClient client = await game.ConnectAsync(StartupTimeout);
+            game = await GameProcess.StartAsync(gameExe, StartupTimeout, cancellationToken);
+            using AgentClient client = await game.ConnectAsync(StartupTimeout, cancellationToken);
 
             CheckpointScreenshot? checkpoint = null;
             if (testDirectory is not null && OperatingSystem.IsWindows())
@@ -192,6 +192,8 @@ public static class TestRunner
             ScreenshotError = "the game did not start, so there was no window to capture",
         };
 }
+
+
 
 
 

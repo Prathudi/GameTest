@@ -57,7 +57,7 @@ public sealed class GameProcess : IAsyncDisposable
     /// Throws GameCrashedException if it exits first, or AgentTimeoutException
     /// if it stays silent for too long.
     /// </summary>
-    public static async Task<GameProcess> StartAsync(string exePath, TimeSpan startupTimeout)
+    public static async Task<GameProcess> StartAsync(string exePath, TimeSpan startupTimeout, CancellationToken cancellationToken = default)
     {
         if (!File.Exists(exePath))
         {
@@ -99,7 +99,7 @@ public sealed class GameProcess : IAsyncDisposable
 
         try
         {
-            game.AgentPort = await portReported.Task.WaitAsync(startupTimeout);
+            game.AgentPort = await portReported.Task.WaitAsync(startupTimeout, cancellationToken);
         }
         catch (TimeoutException)
         {
@@ -120,7 +120,7 @@ public sealed class GameProcess : IAsyncDisposable
     /// Connects to the agent and waits until the game answers a ping. The agent
     /// only answers once the game's main loop is running, so a pong means ready.
     /// </summary>
-    public async Task<AgentClient> ConnectAsync(TimeSpan readyTimeout)
+    public async Task<AgentClient> ConnectAsync(TimeSpan readyTimeout, CancellationToken cancellationToken = default)
     {
         DateTime deadline = DateTime.UtcNow + readyTimeout;
         AgentClient client = await AgentClient.ConnectAsync(AgentPort, readyTimeout);
@@ -128,7 +128,7 @@ public sealed class GameProcess : IAsyncDisposable
         {
             TimeSpan left = deadline - DateTime.UtcNow;
             client.RequestTimeout = left > TimeSpan.FromMilliseconds(100) ? left : TimeSpan.FromMilliseconds(100);
-            await client.PingAsync();
+            await client.PingAsync(cancellationToken);
             client.RequestTimeout = TimeSpan.FromSeconds(5);
             return client;
         }
@@ -232,4 +232,8 @@ public sealed class GameProcess : IAsyncDisposable
         }
     }
 }
+
+
+
+
 

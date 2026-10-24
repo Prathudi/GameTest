@@ -6,7 +6,7 @@ using System.Text.Json;
 namespace GameTest.Runner;
 
 /// <summary>Facts about the whole run that are not part of any single test.</summary>
-public sealed record RunInfo(DateTimeOffset StartedAt, TimeSpan Duration, string GameExe, string TestFolder);
+public sealed record RunInfo(DateTimeOffset StartedAt, TimeSpan Duration, string GameExe, string TestFolder, bool Interrupted = false);
 
 public sealed record ReportSummary(int Total, int Passed, int Failed, int TimedOut)
 {
@@ -31,6 +31,7 @@ public sealed record TestReportEntry(
     IReadOnlyList<string> Log);
 
 public sealed record RunReport(
+    bool Interrupted,
     string StartedAt,
     long DurationMs,
     string Game,
@@ -66,6 +67,7 @@ public static class ReportWriter
     public static string Write(string runDirectory, RunInfo info, IReadOnlyList<TestResult> results)
     {
         var report = new RunReport(
+            info.Interrupted,
             info.StartedAt.ToString("o", CultureInfo.InvariantCulture),
             (long)info.Duration.TotalMilliseconds,
             Path.GetFullPath(info.GameExe),
@@ -88,5 +90,8 @@ public static class ReportWriter
         return path;
     }
 }
+
+
+
 
 
