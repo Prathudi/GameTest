@@ -19,3 +19,5 @@ TestResults/
 /output/
 *.log
 results/
+
+tests/fake/flaky_counter.txt
