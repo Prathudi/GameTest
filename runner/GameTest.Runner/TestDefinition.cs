@@ -43,6 +43,9 @@ public sealed class TestStep
 
     /// <summary>Free text for humans; ignored by the runner.</summary>
     public string? Note { get; init; }
+
+    /// <summary>screenshot: a short name for the picture; used in the file name.</summary>
+    public string? Label { get; init; }
 }
 
 /// <summary>The parts of the game state a step wants to check. Unset fields are not checked.</summary>
@@ -63,3 +66,4 @@ public sealed class ExpectedPoint
     public int? X { get; init; }
     public int? Y { get; init; }
 }
+

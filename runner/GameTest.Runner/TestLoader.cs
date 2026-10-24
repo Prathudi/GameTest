@@ -118,6 +118,7 @@ public static class TestLoader
 
     private static void ValidateStep(TestStep step, string label)
     {
+        if (step.Action != "screenshot") Forbid(step.Label is not null, "label", step.Action, label);
         switch (step.Action)
         {
             case "press":
@@ -136,9 +137,21 @@ public static class TestLoader
                 ValidateExpectation(step.Expect, label);
                 break;
 
+            case "screenshot":
+                Forbid(step.Key is not null || step.Keys is not null, "key/keys", step.Action, label);
+                Forbid(step.DelayMs != 0, "delay_ms", step.Action, label);
+                Forbid(step.Expect is not null, "expect", step.Action, label);
+                Forbid(step.TimeoutMs is not null, "timeout_ms", step.Action, label);
+                if (step.Label is not null && !ValidName.IsMatch(step.Label))
+                {
+                    throw new TestDefinitionException(
+                        $"{label}: 'label' may only contain letters, digits and underscores (it is used in a file name)");
+                }
+                break;
+
             default:
                 throw new TestDefinitionException(
-                    $"{label}: unknown action '{step.Action}' (use press, wait_for or assert)");
+                    $"{label}: unknown action '{step.Action}' (use press, wait_for, assert or screenshot)");
         }
     }
 
@@ -186,4 +199,7 @@ public static class TestLoader
         if (present) throw new TestDefinitionException($"{label}: '{field}' cannot be used in a '{action}' step");
     }
 }
+
+
+
 

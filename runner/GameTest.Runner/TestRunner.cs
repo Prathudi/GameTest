@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Runtime.Versioning;
 using System.Text;
 
 namespace GameTest.Runner;
@@ -45,7 +46,12 @@ public static class TestRunner
             game = await GameProcess.StartAsync(gameExe, StartupTimeout);
             using AgentClient client = await game.ConnectAsync(StartupTimeout);
 
-            result = await TestExecutor.RunAsync(test, client, cancellationToken);
+            CheckpointScreenshot? checkpoint = null;
+            if (testDirectory is not null && OperatingSystem.IsWindows())
+            {
+                checkpoint = MakeCheckpointTaker(game, test.Name, testDirectory);
+            }
+            result = await TestExecutor.RunAsync(test, client, cancellationToken, checkpoint);
             if (result.Outcome != TestOutcome.Pass)
             {
                 result = await ExplainIfGameDiedAsync(result, game);
@@ -101,6 +107,7 @@ public static class TestRunner
             Duration = result.Duration,
             FailureReason = $"{result.FailureReason} (the game process had exited, exit code {game.ExitCode})",
             FailedStep = result.FailedStep,
+            Checkpoints = result.Checkpoints,
             Log = log,
         };
     }
@@ -163,6 +170,17 @@ public static class TestRunner
         }
     }
 
+    // Builds the function that "screenshot" steps use. Like failure pictures, it needs the real game window.
+    [SupportedOSPlatform("windows")]
+    private static CheckpointScreenshot MakeCheckpointTaker(GameProcess game, string testName, string testDirectory) =>
+        async (fileLabel, _) =>
+        {
+            IntPtr window = await WindowCapture.WaitForWindowAsync(game, TimeSpan.FromSeconds(2));
+            string fileName = $"{testName}_{fileLabel}.png";
+            await WindowCapture.CaptureClientAreaAsync(window, Path.Combine(testDirectory, fileName));
+            return $"{testName}/{fileName}";
+        };
+
     private static TestResult Failure(TestDefinition test, TestOutcome outcome, string reason, Stopwatch clock) =>
         new()
         {
@@ -174,3 +192,7 @@ public static class TestRunner
             ScreenshotError = "the game did not start, so there was no window to capture",
         };
 }
+
+
+
+

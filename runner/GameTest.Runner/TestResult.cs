@@ -40,4 +40,8 @@ public sealed class TestResult
 
     /// <summary>The text log of this test.</summary>
     public string? LogFile { get; set; }
+
+    /// <summary>Pictures taken on purpose by "screenshot" steps (paths relative to the run folder).</summary>
+    public List<string> Checkpoints { get; init; } = new();
 }
+

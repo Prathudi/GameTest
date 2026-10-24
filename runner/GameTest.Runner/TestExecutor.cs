@@ -2,6 +2,12 @@
 
 namespace GameTest.Runner;
 
+/// <summary>
+/// Takes a checkpoint picture of the game window. Returns the saved file's path, relative to
+/// the run folder. Throws ScreenshotException if the picture cannot be taken.
+/// </summary>
+public delegate Task<string> CheckpointScreenshot(string fileLabel, CancellationToken cancellationToken);
+
 /// <summary>Runs the steps of one test against a game that is already started.</summary>
 public static class TestExecutor
 {
@@ -22,12 +28,17 @@ public static class TestExecutor
     /// <summary>
     /// Runs every step in order and stops at the first problem. Never throws for a
     /// failing test: the result says what happened. Only cancelling the given
-    /// token makes it throw (OperationCanceledException).
+    /// token makes it throw (OperationCanceledException). Without
+    /// <paramref name="takeScreenshot"/>, "screenshot" steps are skipped.
     /// </summary>
     public static async Task<TestResult> RunAsync(
-        TestDefinition test, IGameClient client, CancellationToken cancellationToken = default)
+        TestDefinition test,
+        IGameClient client,
+        CancellationToken cancellationToken = default,
+        CheckpointScreenshot? takeScreenshot = null)
     {
         var log = new List<string>();
+        var checkpoints = new List<string>();
         var clock = Stopwatch.StartNew();
         void Log(string message) => log.Add($"[{clock.ElapsedMilliseconds,6} ms] {message}");
 
@@ -45,7 +56,7 @@ public static class TestExecutor
             foreach (TestStep step in test.Steps)
             {
                 currentStep++;
-                await ExecuteStepAsync(step, currentStep, client, Log, token);
+                await ExecuteStepAsync(step, currentStep, client, Log, checkpoints, takeScreenshot, token);
             }
         }
         catch (StepFailedException ex)
@@ -87,11 +98,18 @@ public static class TestExecutor
             FailureReason = reason,
             FailedStep = failedStep,
             Log = log,
+            Checkpoints = checkpoints,
         };
     }
 
     private static async Task ExecuteStepAsync(
-        TestStep step, int number, IGameClient client, Action<string> log, CancellationToken token)
+        TestStep step,
+        int number,
+        IGameClient client,
+        Action<string> log,
+        List<string> checkpoints,
+        CheckpointScreenshot? takeScreenshot,
+        CancellationToken token)
     {
         switch (step.Action)
         {
@@ -139,6 +157,29 @@ public static class TestExecutor
                             $"wait_for timed out after {timeoutMs} ms; wanted {StateMatcher.Describe(step.Expect!)}; last state: {StateMatcher.Describe(state)}");
                     }
                     await Task.Delay(PollInterval, token);
+                }
+                break;
+            }
+
+            case "screenshot":
+            {
+                // A checkpoint picture is evidence, not an assertion: if it cannot be taken,
+                // the problem is logged and the test carries on.
+                string name = step.Label ?? "checkpoint";
+                if (takeScreenshot is null)
+                {
+                    log($"step {number}: screenshot '{name}' skipped (this run does not save screenshots)");
+                    break;
+                }
+                try
+                {
+                    string file = await takeScreenshot($"step{number}_{name}", token);
+                    checkpoints.Add(file);
+                    log($"step {number}: screenshot saved ({file})");
+                }
+                catch (ScreenshotException ex)
+                {
+                    log($"step {number}: screenshot '{name}' FAILED: {ex.Message} (the test continues)");
                 }
                 break;
             }

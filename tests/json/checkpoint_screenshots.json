@@ -1,0 +1,14 @@
+﻿{
+  "name": "checkpoint_screenshots",
+  "description": "Takes three pictures during a normal test: on the menu, at the start of the level, and after a move.",
+  "timeout_ms": 20000,
+  "steps": [
+    { "action": "screenshot", "label": "main_menu" },
+    { "action": "press", "key": "Enter" },
+    { "action": "wait_for", "expect": { "scene": "playing" }, "timeout_ms": 2000 },
+    { "action": "screenshot", "label": "start_of_level" },
+    { "action": "press", "key": "Right" },
+    { "action": "assert", "expect": { "player": { "x": 2, "y": 1 } } },
+    { "action": "screenshot", "label": "after_move" }
+  ]
+}

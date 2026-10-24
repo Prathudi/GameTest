@@ -27,6 +27,7 @@ public sealed record TestReportEntry(
     string? Screenshot,
     string? ScreenshotError,
     string? LogFile,
+    IReadOnlyList<string> CheckpointScreenshots,
     IReadOnlyList<string> Log);
 
 public sealed record RunReport(
@@ -79,6 +80,7 @@ public static class ReportWriter
                 r.ScreenshotFile,
                 r.ScreenshotError,
                 r.LogFile,
+                r.Checkpoints,
                 r.Log)).ToList());
 
         string path = Path.GetFullPath(Path.Combine(runDirectory, "report.json"));
@@ -86,3 +88,5 @@ public static class ReportWriter
         return path;
     }
 }
+
+
